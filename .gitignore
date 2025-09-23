@@ -25,5 +25,15 @@ go.work.sum
 # env file
 .env
 
-build
+# 构建产物
+build/
+micro
+
+# 测试产物
+coverage.out
+coverage.html
+
+# 临时文件
+*.tmp
+*.temp
 

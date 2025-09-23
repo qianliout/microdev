@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 
 	"microdev/pkg/errors"
 )
@@ -19,6 +20,9 @@ type Config struct {
 
 	// 其他配置
 	StreamOutput bool
+
+	// 并发配置
+	Concurrency int // 并发调用大模型的数量
 }
 
 // LoadConfig 从环境变量加载配置
@@ -29,6 +33,7 @@ func LoadConfig() (*Config, error) {
 		MaxTokens:    2048,
 		Temperature:  0.7,
 		StreamOutput: true,
+		Concurrency:  getConcurrencyFromEnv(),
 	}
 
 	// 从环境变量读取API密钥
@@ -59,4 +64,24 @@ func (c *Config) HasDashScopeKey() bool {
 // HasBailianKey 检查是否有百炼API密钥
 func (c *Config) HasBailianKey() bool {
 	return c.AliBailianAPIKey != ""
+}
+
+// getConcurrencyFromEnv 从环境变量获取并发数配置
+func getConcurrencyFromEnv() int {
+	concurrencyStr := os.Getenv("MICRO_CONCURRENCY")
+	if concurrencyStr == "" {
+		return 3 // 默认并发数为3
+	}
+
+	concurrency, err := strconv.Atoi(concurrencyStr)
+	if err != nil || concurrency < 1 {
+		return 3 // 解析失败或无效值时使用默认值
+	}
+
+	// 限制最大并发数为10，避免过度并发
+	if concurrency > 10 {
+		return 10
+	}
+
+	return concurrency
 }
