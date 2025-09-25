@@ -22,9 +22,14 @@ func TestCommandIntegration(t *testing.T) {
 		Convey("Prompt命令测试", func() {
 			cmd := promptCmd.NewPromptCommand()
 			So(cmd, ShouldNotBeNil)
-			So(cmd.Use, ShouldEqual, "prompt <input>")
+			So(cmd.Use, ShouldEqual, "prompt [input]")
 			So(cmd.Aliases, ShouldContain, "p")
 			So(cmd.Short, ShouldEqual, "优化并生成更好的提示词")
+
+			// 测试新增的交互式标志
+			interactiveFlag := cmd.Flags().Lookup("interactive")
+			So(interactiveFlag, ShouldNotBeNil)
+			So(interactiveFlag.Shorthand, ShouldEqual, "i")
 		})
 
 		Convey("Translate命令测试", func() {

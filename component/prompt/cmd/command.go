@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -17,8 +19,10 @@ import (
 
 // NewPromptCommand 创建 prompt 子命令
 func NewPromptCommand() *cobra.Command {
+	var interactive bool
+
 	cmd := &cobra.Command{
-		Use:     "prompt <input>",
+		Use:     "prompt [input]",
 		Aliases: []string{"p"},
 		Short:   "优化并生成更好的提示词",
 		Long: `优化提示词工具，帮助您将原始提示词优化成更清晰、更有效的版本。
@@ -27,22 +31,32 @@ func NewPromptCommand() *cobra.Command {
 - 直接文本：micro p "请帮我写一个函数"
 - 文件路径：micro p ./prompt.txt
 - 标准输入：echo "提示词" | micro p -
+- 交互模式：micro p -i 或 micro p --interactive
+
+交互模式特性：
+- 保持对话历史和上下文
+- 智能记忆压缩
+- 输入 'exit'、'quit' 或 '退出' 结束会话
 
 示例：
   micro p "请帮我写一个排序算法"
   micro p ./my-prompt.txt
-  micro p - < prompt.txt`,
-		Args: cobra.ExactArgs(1),
-		RunE: runPromptCommand,
+  micro p - < prompt.txt
+  micro p -i  # 进入交互模式`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runPromptCommand(cmd, args, interactive)
+		},
 	}
+
+	cmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "启用交互式会话模式")
 
 	return cmd
 }
 
 // runPromptCommand 执行 prompt 命令的逻辑
-func runPromptCommand(cmd *cobra.Command, args []string) error {
+func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error {
 	log := logger.NewLogger()
-	inputText := args[0]
 
 	// 加载配置
 	cfg, err := config.LoadConfig()
@@ -52,17 +66,29 @@ func runPromptCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// 处理输入
-	inputProcessor := input.NewProcessor(log)
-	content, err := inputProcessor.Process(inputText)
+	// 初始化优化服务
+	optimizer, err := service.NewOptimizerService(cfg, log)
 	if err != nil {
 		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
 		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
 		return err
 	}
 
-	// 初始化优化服务
-	optimizer, err := service.NewOptimizerService(cfg, log)
+	// 如果是交互模式
+	if interactive {
+		return runInteractiveMode(optimizer, log)
+	}
+
+	// 非交互模式，需要输入参数
+	if len(args) == 0 {
+		return fmt.Errorf("非交互模式需要提供输入参数，使用 -i 或 --interactive 进入交互模式")
+	}
+
+	inputText := args[0]
+
+	// 处理输入
+	inputProcessor := input.NewProcessor(log)
+	content, err := inputProcessor.Process(inputText)
 	if err != nil {
 		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
 		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
@@ -87,4 +113,96 @@ func runPromptCommand(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// runInteractiveMode 运行交互式模式
+func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger) error {
+	// 开始会话
+	optimizer.StartSession()
+	defer optimizer.EndSession()
+
+	// 显示欢迎信息
+	fmt.Println("🤖 欢迎使用提示词优化交互模式！")
+	fmt.Println("💡 特性：保持对话历史、智能记忆压缩、上下文感知优化")
+	fmt.Println("📝 输入您的提示词，我将为您优化。输入 'exit'、'quit' 或 '退出' 结束会话。")
+	fmt.Println(strings.Repeat("-", 60))
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for {
+		// 显示输入提示
+		fmt.Print("\n💬 请输入提示词: ")
+
+		// 读取用户输入
+		if !scanner.Scan() {
+			break
+		}
+
+		userInput := strings.TrimSpace(scanner.Text())
+
+		// 检查退出命令
+		if isExitCommand(userInput) {
+			fmt.Println("\n👋 感谢使用！会话已结束。")
+			break
+		}
+
+		// 跳过空输入
+		if userInput == "" {
+			fmt.Println("⚠️  输入不能为空，请重新输入。")
+			continue
+		}
+
+		// 显示处理状态
+		fmt.Println("\n🔄 正在优化提示词...")
+
+		// 初始化输出处理器
+		outputProcessor := output.NewProcessor("", log)
+
+		// 创建优化请求
+		request := &model.OptimizationRequest{
+			OriginalPrompt: userInput,
+			Language:       "中文",
+		}
+
+		// 执行会话模式优化
+		if err := optimizer.OptimizeWithSession(request, outputProcessor); err != nil {
+			log.Error().Err(err).Msg("优化失败")
+			fmt.Fprintf(os.Stderr, "\n❌ 优化失败: %s\n", errors.GetUserFriendlyMessage(err))
+			continue
+		}
+
+		outputProcessor.Close()
+
+		// 显示会话统计
+		stats := optimizer.GetSessionStats()
+		if stats["session_active"].(bool) {
+			fmt.Printf("\n📊 会话统计: %d条消息", stats["total_messages"])
+			if stats["has_summary"].(bool) {
+				fmt.Printf(" (已压缩记忆)")
+			}
+			fmt.Println()
+		}
+
+		fmt.Println(strings.Repeat("-", 60))
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("读取输入时发生错误: %v", err)
+	}
+
+	return nil
+}
+
+// isExitCommand 检查是否为退出命令
+func isExitCommand(input string) bool {
+	exitCommands := []string{"exit", "quit", "退出", "q", "bye", "再见"}
+	lowerInput := strings.ToLower(strings.TrimSpace(input))
+
+	for _, cmd := range exitCommands {
+		if lowerInput == cmd {
+			return true
+		}
+	}
+
+	return false
 }

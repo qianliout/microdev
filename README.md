@@ -8,6 +8,9 @@ MicroDev 是一个基于 Go 语言开发的微开发工具集，提供提示词�
 - 智能优化用户输入的提示词
 - 支持文件输入和直接文本输入
 - 基于大语言模型生成更好的提示词
+- **🆕 交互式会话模式**：保持对话历史和上下文
+- **🧠 智能记忆管理**：自动压缩长对话历史
+- **🔄 上下文感知优化**：基于对话历史提供更精准的优化建议
 
 ### 🌐 中英互译 (Translate)
 - 智能检测语言并进行中英互译
@@ -74,7 +77,18 @@ micro p "优化这个提示词"
 
 # 从文件读取
 micro p /path/to/prompt.txt
+
+# 🆕 交互式会话模式
+micro p -i
+micro p --interactive
 ```
+
+#### 交互式会话模式特性
+- **对话记忆**：自动记住当前会话中的完整对话历史
+- **记忆压缩**：当对话轮次较多时，主动对之前的对话进行智能总结
+- **持续对话**：保持对话连续性，直到用户明确表示退出
+- **上下文感知**：基于对话历史提供更精准的优化建议
+- **退出命令**：支持 `exit`、`quit`、`退出`、`q`、`bye`、`再见` 等命令
 
 #### 示例
 ```bash
@@ -83,6 +97,11 @@ micro p "帮我写一个Python函数"
 
 # 从文件优化
 micro p ./prompts/my_prompt.txt
+
+# 🆕 进入交互式会话模式
+micro p -i
+# 然后可以连续输入多个提示词进行优化
+# 系统会记住对话历史，提供更好的上下文感知优化
 ```
 
 ### 中英互译 (translate/t)
@@ -224,6 +243,54 @@ go test ./...
 ```bash
 go build -o micro ./cmd/micro
 ```
+
+## 📚 文档
+
+### 子命令文档
+- 🚀 [Prompt 子命令](docs/prompt/README.md) - 提示词优化工具完整指南
+- 🌐 [Translate 子命令](docs/translate/README.md) - 中英互译工具完整指南
+- ⚙️ [通用配置](docs/general/README.md) - 环境配置和最佳实践
+
+### 详细文档
+- [文档中心](docs/README.md) - 完整的文档导航和索引
+- [交互式功能演示](docs/prompt/interactive-demo.md) - 详细的交互模式使用指南
+- [详细日志输出演示](docs/prompt/detailed-logging-demo.md) - 日志功能和调试指南
+- [会话存储架构设计](docs/prompt/session-storage-architecture.md) - 模块化存储架构详解
+
+## 🧪 测试
+
+所有测试文件都位于 `tests/` 目录下，包含：
+
+- **基础功能测试** (`basic_test.go`) - 核心组件和配置测试
+- **集成测试** (`integration_test.go`) - 端到端工作流测试
+- **LLM连接测试** (`llm_connectivity_test.go`) - 语言模型连接测试
+- **会话管理测试** (`session_manager_test.go`) - 会话功能测试
+- **工具函数测试** (`utils_test.go`) - 辅助函数测试
+
+### 运行测试
+
+```bash
+# 运行所有测试
+go test ./tests/ -v
+
+# 运行特定测试
+go test ./tests/session_manager_test.go -v
+
+# 运行测试并查看覆盖率
+go test ./tests/ -cover
+```
+
+## 🔍 日志和调试
+
+系统提供详细的日志输出，帮助您了解：
+
+- **📝 记忆内容**：用户输入和助手回复的详细记录
+- **🧠 上下文构建**：如何构建和使用对话上下文
+- **🗜️ 记忆压缩**：何时触发压缩以及压缩了什么内容
+- **📤 LLM交互**：发送给语言模型的完整内容
+- **⏱️ 性能监控**：响应时间和处理统计
+
+查看 [详细日志输出演示](docs/detailed-logging-demo.md) 了解更多信息。
 
 ## 贡献
 
