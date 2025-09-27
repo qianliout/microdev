@@ -29,7 +29,7 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
 		// 默认配置
-		ModelName:    "qwen-plus-latest",
+		ModelName:    "qwen3-max",
 		MaxTokens:    2048,
 		Temperature:  0.7,
 		StreamOutput: true,
