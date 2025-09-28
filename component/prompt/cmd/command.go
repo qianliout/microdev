@@ -62,7 +62,7 @@ func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
+		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
 		return err
 	}
 
@@ -70,7 +70,7 @@ func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error
 	optimizer, err := service.NewOptimizerService(cfg, log)
 	if err != nil {
 		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
+		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
 		return err
 	}
 
@@ -91,7 +91,7 @@ func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error
 	content, err := inputProcessor.Process(inputText)
 	if err != nil {
 		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
+		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
 		return err
 	}
 
@@ -108,7 +108,7 @@ func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error
 	// 执行优化
 	if err := optimizer.Optimize(request, outputProcessor); err != nil {
 		log.Error().Msg(errors.GetUserFriendlyMessage(err))
-		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
+		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
 		return err
 	}
 
@@ -122,16 +122,16 @@ func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger)
 	defer optimizer.EndSession()
 
 	// 显示欢迎信息
-	fmt.Println("🤖 欢迎使用提示词优化交互模式！")
-	fmt.Println("💡 特性：保持对话历史、智能记忆压缩、上下文感知优化")
-	fmt.Println("📝 输入您的提示词，我将为您优化。输入 'exit'、'quit' 或 '退出' 结束会话。")
-	fmt.Println(strings.Repeat("-", 60))
+	log.UserInfo("🤖 欢迎使用提示词优化交互模式！")
+	log.UserInfo("💡 特性：保持对话历史、智能记忆压缩、上下文感知优化")
+	log.UserInfo("📝 输入您的提示词，我将为您优化。输入 'exit'、'quit' 或 '退出' 结束会话。")
+	log.UserInfo(strings.Repeat("-", 60))
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
 		// 显示输入提示
-		fmt.Print("\n💬 请输入提示词: ")
+		log.UserPrompt("\n💬 请输入提示词: ")
 
 		// 读取用户输入
 		if !scanner.Scan() {
@@ -142,18 +142,18 @@ func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger)
 
 		// 检查退出命令
 		if isExitCommand(userInput) {
-			fmt.Println("\n👋 感谢使用！会话已结束。")
+			log.UserInfo("\n👋 感谢使用！会话已结束。")
 			break
 		}
 
 		// 跳过空输入
 		if userInput == "" {
-			fmt.Println("⚠️  输入不能为空，请重新输入。")
+			log.UserWarning("⚠️  输入不能为空，请重新输入。")
 			continue
 		}
 
 		// 显示处理状态
-		fmt.Println("\n🔄 正在优化提示词...")
+		log.UserInfo("\n🔄 正在优化提示词...")
 
 		// 初始化输出处理器
 		outputProcessor := output.NewProcessor("", log)
@@ -167,7 +167,7 @@ func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger)
 		// 执行会话模式优化
 		if err := optimizer.OptimizeWithSession(request, outputProcessor); err != nil {
 			log.Error().Err(err).Msg("优化失败")
-			fmt.Fprintf(os.Stderr, "\n❌ 优化失败: %s\n", errors.GetUserFriendlyMessage(err))
+			log.UserError(fmt.Sprintf("❌ 优化失败: %s", errors.GetUserFriendlyMessage(err)))
 			continue
 		}
 
@@ -176,14 +176,14 @@ func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger)
 		// 显示会话统计
 		stats := optimizer.GetSessionStats()
 		if stats["session_active"].(bool) {
-			fmt.Printf("\n📊 会话统计: %d条消息", stats["total_messages"])
+			statsMsg := fmt.Sprintf("\n📊 会话统计: %d条消息", stats["total_messages"])
 			if stats["has_summary"].(bool) {
-				fmt.Printf(" (已压缩记忆)")
+				statsMsg += " (已压缩记忆)"
 			}
-			fmt.Println()
+			log.UserInfo(statsMsg)
 		}
 
-		fmt.Println(strings.Repeat("-", 60))
+		log.UserInfo(strings.Repeat("-", 60))
 	}
 
 	if err := scanner.Err(); err != nil {

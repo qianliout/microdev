@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -133,4 +134,29 @@ func (l *Logger) Error() *zerolog.Event {
 		ev = ev.Str("SubModule", l.Submodule)
 	}
 	return ev
+}
+
+// UserInfo 输出用户友好的信息消息（直接输出到stdout，不带时间戳）
+func (l *Logger) UserInfo(msg string) {
+	fmt.Println(msg)
+}
+
+// UserError 输出用户友好的错误消息（直接输出到stderr，不带时间戳）
+func (l *Logger) UserError(msg string) {
+	fmt.Fprintf(os.Stderr, "%s\n", msg)
+}
+
+// UserPrompt 输出用户提示信息（不换行，用于交互式输入）
+func (l *Logger) UserPrompt(msg string) {
+	fmt.Print(msg)
+}
+
+// UserSuccess 输出成功消息
+func (l *Logger) UserSuccess(msg string) {
+	fmt.Println(msg)
+}
+
+// UserWarning 输出警告消息
+func (l *Logger) UserWarning(msg string) {
+	fmt.Println(msg)
 }

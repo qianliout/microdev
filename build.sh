@@ -42,18 +42,29 @@ if [ $? -eq 0 ]; then
     chmod +x "$GOBIN/micro"
     echo -e "${GREEN}✅ 已设置可执行权限${NC}"
 
+    # 复制为短命令 'm'
+    cp "$GOBIN/micro" "$GOBIN/m"
+    chmod +x "$GOBIN/m"
+    echo -e "${GREEN}✅ 已创建短命令 'm'${NC}"
+
     # 显示文件信息
-    ls -la "$GOBIN/micro"
+    echo -e "${YELLOW}📁 安装的文件:${NC}"
+    ls -la "$GOBIN/micro" "$GOBIN/m"
 
     echo -e "${GREEN}🎉 micro 命令已安装到: $GOBIN/micro${NC}"
+    echo -e "${GREEN}🎉 短命令 'm' 已安装到: $GOBIN/m${NC}"
     echo -e "${YELLOW}💡 请确保 $GOBIN 在您的 PATH 中${NC}"
     echo -e "${YELLOW}💡 使用方法:${NC}"
     echo -e "${YELLOW}  - micro p <input_content>  # 优化提示词${NC}"
     echo -e "${YELLOW}  - micro t <target>         # 中英互译${NC}"
+    echo -e "${YELLOW}  - m p <input_content>      # 短命令优化提示词${NC}"
+    echo -e "${YELLOW}  - m t <target>             # 短命令中英互译${NC}"
     echo -e "${YELLOW}💡 示例:${NC}"
     echo -e "${YELLOW}  - micro p 'hello world'${NC}"
     echo -e "${YELLOW}  - micro t 'hello world'${NC}"
-    echo -e "${YELLOW}  - micro t /path/to/file.txt${NC}"
+    echo -e "${YELLOW}  - m p 'hello world'        # 使用短命令${NC}"
+    echo -e "${YELLOW}  - m t 'hello world'        # 使用短命令${NC}"
+    echo -e "${YELLOW}  - m t -i                   # 交互式翻译${NC}"
 else
     echo -e "${RED}❌ 编译失败!${NC}"
     exit 1

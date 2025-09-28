@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -22,6 +24,7 @@ func NewTranslateCommand() *cobra.Command {
 		flagType        string
 		flagConcurrency int
 		flagForce       bool
+		flagInteractive bool
 	)
 
 	cmd := &cobra.Command{
@@ -35,6 +38,7 @@ func NewTranslateCommand() *cobra.Command {
 - 文件路径：micro t ./document.md
 - 目录路径：micro t ./docs/ -d
 - 标准输入：echo "Hello" | micro t -
+- 交互模式：micro t -i 或 micro t --interactive
 
 功能特性：
 - 自动语言检测（中文↔英文）
@@ -42,6 +46,7 @@ func NewTranslateCommand() *cobra.Command {
 - 并发翻译提升效率
 - 翻译幂等性（避免重复翻译）
 - 智能输出路径生成
+- 交互式翻译会话
 
 示例：
   micro t "你好世界"                    # 直接翻译文本
@@ -49,10 +54,11 @@ func NewTranslateCommand() *cobra.Command {
   micro t ./docs/ -d                   # 翻译目录下所有md文件
   micro t ./docs/ -d -t txt            # 翻译目录下所有txt文件
   micro t ./file.md -f                 # 强制重新翻译
-  micro t ./docs/ -d -c 5              # 使用5个并发协程`,
-		Args: cobra.ExactArgs(1),
+  micro t ./docs/ -d -c 5              # 使用5个并发协程
+  micro t -i                           # 进入交互模式`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runTranslateCommand(args[0], flagDir, flagFile, flagType, flagConcurrency, flagForce)
+			return runTranslateCommand(cmd, args, flagDir, flagFile, flagType, flagConcurrency, flagForce, flagInteractive)
 		},
 	}
 
@@ -62,19 +68,20 @@ func NewTranslateCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&flagType, "type", "t", "md", "文件类型过滤（仅在目录模式下有效）")
 	cmd.Flags().IntVarP(&flagConcurrency, "concurrency", "c", 0, "并发数（0表示使用配置默认值）")
 	cmd.Flags().BoolVar(&flagForce, "force", false, "强制重新翻译（忽略已存在的翻译文件）")
+	cmd.Flags().BoolVarP(&flagInteractive, "interactive", "i", false, "启用交互式翻译模式")
 
 	return cmd
 }
 
 // runTranslateCommand 执行翻译命令的逻辑
-func runTranslateCommand(target string, flagDir, flagFile bool, flagType string, flagConcurrency int, flagForce bool) error {
+func runTranslateCommand(cmd *cobra.Command, args []string, flagDir, flagFile bool, flagType string, flagConcurrency int, flagForce, flagInteractive bool) error {
 	log := logger.NewLogger()
 
 	// 加载配置
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
+		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
 		return err
 	}
 
@@ -83,25 +90,37 @@ func runTranslateCommand(target string, flagDir, flagFile bool, flagType string,
 		cfg.Concurrency = flagConcurrency
 	}
 
-	// 处理输入
-	inputProcessor := input.NewProcessor(log)
-	content, err := inputProcessor.Process(target)
-	if err != nil {
-		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
-		return err
-	}
-
 	// 初始化翻译服务
 	translator, err := service.NewTranslatorService(cfg, log)
 	if err != nil {
 		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
+		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
 		return err
 	}
 
 	// 初始化处理服务
 	processor := service.NewProcessorService(translator, log)
+
+	// 如果是交互模式
+	if flagInteractive {
+		return runInteractiveTranslateMode(processor, log)
+	}
+
+	// 非交互模式，需要输入参数
+	if len(args) == 0 {
+		return fmt.Errorf("非交互模式需要提供输入参数，使用 -i 或 --interactive 进入交互模式")
+	}
+
+	target := args[0]
+
+	// 处理输入
+	inputProcessor := input.NewProcessor(log)
+	content, err := inputProcessor.Process(target)
+	if err != nil {
+		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
+		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		return err
+	}
 
 	// 根据标志和输入类型决定处理方式
 	return processInput(target, content, processor, log, &model.ProcessingOptions{
@@ -140,9 +159,76 @@ func processInput(target, content string, processor *service.ProcessorService, l
 	// 直接文本
 	if err := processor.ProcessDirectText(content); err != nil {
 		log.Error().Msg(errors.GetUserFriendlyMessage(err))
-		fmt.Fprintf(os.Stderr, "\n错误: %s\n", errors.GetUserFriendlyMessage(err))
+		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
 		return err
 	}
 
 	return nil
+}
+
+// runInteractiveTranslateMode 运行交互式翻译模式
+func runInteractiveTranslateMode(processor *service.ProcessorService, log *logger.Logger) error {
+	// 显示欢迎信息
+	log.UserInfo("🌐 欢迎使用中英互译交互模式！")
+	log.UserInfo("💡 特性：自动语言检测、智能翻译、实时输出")
+	log.UserInfo("📝 输入您要翻译的文本，我将为您进行中英互译。输入 'exit'、'quit' 或 '退出' 结束会话。")
+	log.UserInfo(strings.Repeat("-", 60))
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for {
+		// 显示输入提示
+		log.UserPrompt("\n🌍 请输入要翻译的文本: ")
+
+		// 读取用户输入
+		if !scanner.Scan() {
+			break
+		}
+
+		userInput := strings.TrimSpace(scanner.Text())
+
+		// 检查退出命令
+		if isExitCommand(userInput) {
+			log.UserInfo("\n👋 感谢使用！翻译会话已结束。")
+			break
+		}
+
+		// 跳过空输入
+		if userInput == "" {
+			log.UserWarning("⚠️  输入不能为空，请重新输入。")
+			continue
+		}
+
+		// 显示处理状态
+		log.UserInfo("\n🔄 正在翻译...")
+
+		// 执行翻译
+		if err := processor.ProcessDirectText(userInput); err != nil {
+			log.Error().Err(err).Msg("翻译失败")
+			log.UserError(fmt.Sprintf("❌ 翻译失败: %s", errors.GetUserFriendlyMessage(err)))
+			continue
+		}
+
+		log.UserInfo(strings.Repeat("-", 60))
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("读取输入时发生错误: %v", err)
+	}
+
+	return nil
+}
+
+// isExitCommand 检查是否为退出命令
+func isExitCommand(input string) bool {
+	exitCommands := []string{"exit", "quit", "退出", "q", "bye", "再见"}
+	lowerInput := strings.ToLower(strings.TrimSpace(input))
+
+	for _, cmd := range exitCommands {
+		if lowerInput == cmd {
+			return true
+		}
+	}
+
+	return false
 }

@@ -88,7 +88,7 @@ func TestBasicFunctionality(t *testing.T) {
 				So(cfg, ShouldNotBeNil)
 
 				// 检查默认值
-				So(cfg.ModelName, ShouldEqual, "qwen-plus-latest")
+				So(cfg.ModelName, ShouldEqual, "qwen3-max")
 				So(cfg.MaxTokens, ShouldEqual, 2048)
 				So(cfg.Temperature, ShouldEqual, 0.7)
 				So(cfg.StreamOutput, ShouldBeTrue)
@@ -170,6 +170,131 @@ func TestEnvironmentSetup(t *testing.T) {
 
 			// 这个测试总是通过，只是用来显示环境信息
 			So(true, ShouldBeTrue)
+		})
+
+		Convey("环境变量配置测试", func() {
+			// 保存原始环境变量
+			originalModelName := os.Getenv("MICRO_MODEL_NAME")
+			originalMaxTokens := os.Getenv("MICRO_MAX_TOKENS")
+			originalTemperature := os.Getenv("MICRO_TEMPERATURE")
+			originalStreamOutput := os.Getenv("MICRO_STREAM_OUTPUT")
+
+			// 清理函数
+			defer func() {
+				if originalModelName != "" {
+					os.Setenv("MICRO_MODEL_NAME", originalModelName)
+				} else {
+					os.Unsetenv("MICRO_MODEL_NAME")
+				}
+				if originalMaxTokens != "" {
+					os.Setenv("MICRO_MAX_TOKENS", originalMaxTokens)
+				} else {
+					os.Unsetenv("MICRO_MAX_TOKENS")
+				}
+				if originalTemperature != "" {
+					os.Setenv("MICRO_TEMPERATURE", originalTemperature)
+				} else {
+					os.Unsetenv("MICRO_TEMPERATURE")
+				}
+				if originalStreamOutput != "" {
+					os.Setenv("MICRO_STREAM_OUTPUT", originalStreamOutput)
+				} else {
+					os.Unsetenv("MICRO_STREAM_OUTPUT")
+				}
+			}()
+
+			Convey("模型名环境变量", func() {
+				// 测试有效模型名
+				os.Setenv("MICRO_MODEL_NAME", "qwen-plus")
+				cfg, err := config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.ModelName, ShouldEqual, "qwen-plus")
+
+				// 测试无效模型名回退到默认值
+				os.Setenv("MICRO_MODEL_NAME", "invalid-model")
+				cfg, err = config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.ModelName, ShouldEqual, "qwen3-max")
+
+				// 测试空值使用默认值
+				os.Unsetenv("MICRO_MODEL_NAME")
+				cfg, err = config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.ModelName, ShouldEqual, "qwen3-max")
+			})
+
+			Convey("最大Token数环境变量", func() {
+				// 测试有效值
+				os.Setenv("MICRO_MAX_TOKENS", "1024")
+				cfg, err := config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.MaxTokens, ShouldEqual, 1024)
+
+				// 测试超出范围的值
+				os.Setenv("MICRO_MAX_TOKENS", "10000")
+				cfg, err = config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.MaxTokens, ShouldEqual, 8192) // 应该被限制到最大值
+
+				// 测试无效值回退到默认值
+				os.Setenv("MICRO_MAX_TOKENS", "invalid")
+				cfg, err = config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.MaxTokens, ShouldEqual, 2048)
+			})
+
+			Convey("温度环境变量", func() {
+				// 测试有效值
+				os.Setenv("MICRO_TEMPERATURE", "0.5")
+				cfg, err := config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.Temperature, ShouldEqual, 0.5)
+
+				// 测试超出范围的值
+				os.Setenv("MICRO_TEMPERATURE", "3.0")
+				cfg, err = config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.Temperature, ShouldEqual, 0.7) // 应该回退到默认值
+
+				// 测试无效值回退到默认值
+				os.Setenv("MICRO_TEMPERATURE", "invalid")
+				cfg, err = config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.Temperature, ShouldEqual, 0.7)
+			})
+
+			Convey("流式输出环境变量", func() {
+				// 测试 true
+				os.Setenv("MICRO_STREAM_OUTPUT", "true")
+				cfg, err := config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.StreamOutput, ShouldBeTrue)
+
+				// 测试 false
+				os.Setenv("MICRO_STREAM_OUTPUT", "false")
+				cfg, err = config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.StreamOutput, ShouldBeFalse)
+
+				// 测试无效值回退到默认值
+				os.Setenv("MICRO_STREAM_OUTPUT", "invalid")
+				cfg, err = config.LoadConfig()
+				So(err, ShouldBeNil)
+				So(cfg.StreamOutput, ShouldBeTrue) // 默认为 true
+			})
+
+			Convey("支持的模型列表", func() {
+				supportedModels := config.GetSupportedModels()
+				So(len(supportedModels), ShouldBeGreaterThan, 0)
+				So(supportedModels, ShouldContain, "qwen3-max")
+				So(supportedModels, ShouldContain, "qwen-plus")
+				So(supportedModels, ShouldContain, "qwen-turbo")
+
+				// 测试模型支持检查
+				So(config.IsModelSupported("qwen3-max"), ShouldBeTrue)
+				So(config.IsModelSupported("qwen-plus"), ShouldBeTrue)
+				So(config.IsModelSupported("invalid-model"), ShouldBeFalse)
+			})
 		})
 	})
 }

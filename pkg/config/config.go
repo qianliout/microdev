@@ -29,10 +29,10 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
 		// 默认配置
-		ModelName:    "qwen3-max",
-		MaxTokens:    2048,
-		Temperature:  0.7,
-		StreamOutput: true,
+		ModelName:    getModelNameFromEnv(),
+		MaxTokens:    getMaxTokensFromEnv(),
+		Temperature:  getTemperatureFromEnv(),
+		StreamOutput: getStreamOutputFromEnv(),
 		Concurrency:  getConcurrencyFromEnv(),
 	}
 
@@ -64,6 +64,94 @@ func (c *Config) HasDashScopeKey() bool {
 // HasBailianKey 检查是否有百炼API密钥
 func (c *Config) HasBailianKey() bool {
 	return c.AliBailianAPIKey != ""
+}
+
+// GetSupportedModels 获取支持的模型列表
+func GetSupportedModels() []string {
+	return []string{
+		"qwen3-max", "qwen-plus", "qwen-plus-latest",
+		"qwen-turbo", "qwen-turbo-latest",
+		"qwen-max", "qwen-max-latest",
+		"qwen2.5-72b-instruct", "qwen2.5-32b-instruct",
+		"qwen2.5-14b-instruct", "qwen2.5-7b-instruct",
+	}
+}
+
+// IsModelSupported 检查模型是否被支持
+func IsModelSupported(modelName string) bool {
+	supportedModels := GetSupportedModels()
+	for _, supported := range supportedModels {
+		if modelName == supported {
+			return true
+		}
+	}
+	return false
+}
+
+// getModelNameFromEnv 从环境变量获取模型名称配置
+func getModelNameFromEnv() string {
+	modelName := os.Getenv("MICRO_MODEL_NAME")
+	if modelName == "" {
+		return "qwen3-max" // 默认模型
+	}
+
+	// 验证模型名称是否在支持列表中
+	if IsModelSupported(modelName) {
+		return modelName
+	}
+
+	// 如果不在支持列表中，返回默认值
+	return "qwen3-max"
+}
+
+// getMaxTokensFromEnv 从环境变量获取最大Token数配置
+func getMaxTokensFromEnv() int {
+	maxTokensStr := os.Getenv("MICRO_MAX_TOKENS")
+	if maxTokensStr == "" {
+		return 2048 // 默认最大Token数
+	}
+
+	maxTokens, err := strconv.Atoi(maxTokensStr)
+	if err != nil || maxTokens < 1 {
+		return 2048 // 解析失败或无效值时使用默认值
+	}
+
+	// 限制最大Token数在合理范围内
+	if maxTokens > 8192 {
+		return 8192
+	}
+
+	return maxTokens
+}
+
+// getTemperatureFromEnv 从环境变量获取温度配置
+func getTemperatureFromEnv() float64 {
+	temperatureStr := os.Getenv("MICRO_TEMPERATURE")
+	if temperatureStr == "" {
+		return 0.7 // 默认温度
+	}
+
+	temperature, err := strconv.ParseFloat(temperatureStr, 64)
+	if err != nil || temperature < 0 || temperature > 2 {
+		return 0.7 // 解析失败或无效值时使用默认值
+	}
+
+	return temperature
+}
+
+// getStreamOutputFromEnv 从环境变量获取流式输出配置
+func getStreamOutputFromEnv() bool {
+	streamOutputStr := os.Getenv("MICRO_STREAM_OUTPUT")
+	if streamOutputStr == "" {
+		return true // 默认启用流式输出
+	}
+
+	streamOutput, err := strconv.ParseBool(streamOutputStr)
+	if err != nil {
+		return true // 解析失败时使用默认值
+	}
+
+	return streamOutput
 }
 
 // getConcurrencyFromEnv 从环境变量获取并发数配置

@@ -13,7 +13,7 @@ build:
 
 # 安装到 GOBIN
 install:
-	@echo "📦 安装 micro 命令到 GOBIN..."
+	@echo "📦 安装 micro 命令到 GOBIN (包含短命令 'm')..."
 	@./build.sh
 
 # 运行测试
@@ -71,7 +71,7 @@ help:
 	@echo ""
 	@echo "可用命令:"
 	@echo "  build          构建 micro 命令"
-	@echo "  install        安装 micro 命令到 GOBIN"
+	@echo "  install        安装 micro 命令到 GOBIN (包含短命令 'm')"
 	@echo "  test           运行完整测试套件"
 	@echo "  test-basic     运行基础测试"
 	@echo "  test-utils     运行工具函数测试"
