@@ -74,6 +74,7 @@ func GetSupportedModels() []string {
 		"qwen-max", "qwen-max-latest",
 		"qwen2.5-72b-instruct", "qwen2.5-32b-instruct",
 		"qwen2.5-14b-instruct", "qwen2.5-7b-instruct",
+		"qwen-flash",
 	}
 }
 
