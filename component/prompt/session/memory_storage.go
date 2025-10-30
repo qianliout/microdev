@@ -258,22 +258,22 @@ func (m *MemoryStorage) Close() error {
 
 // copySession 深拷贝会话
 func (m *MemoryStorage) copySession(session *Session) *Session {
-	copy := &Session{
+	ses := &Session{
 		ID:      session.ID,
 		Summary: session.Summary,
 		logger:  session.logger,
 	}
 
-	copy.Messages = make([]Message, len(session.Messages))
+	ses.Messages = make([]Message, len(session.Messages))
 	for i, msg := range session.Messages {
-		copy.Messages[i] = Message{
+		ses.Messages[i] = Message{
 			Role:      msg.Role,
 			Content:   msg.Content,
 			Timestamp: msg.Timestamp,
 		}
 	}
 
-	return copy
+	return ses
 }
 
 // copyMetrics 深拷贝指标
