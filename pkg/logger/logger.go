@@ -48,3 +48,11 @@ func (l *Logger) Warn() *zerolog.Event         { return l.logger.Warn() }
 func (l *Logger) Error() *zerolog.Event        { return l.logger.Error() }
 func (l *Logger) Err(err error) *zerolog.Event { return l.logger.Err(err) }
 func (l *Logger) Writer() io.Writer            { return l.out }
+
+func WithModule(m, su string) Option {
+	op := func(l *Logger) {
+		l.Module = m
+		l.Submodule = su
+	}
+	return op
+}

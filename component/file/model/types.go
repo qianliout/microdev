@@ -43,3 +43,33 @@ type Result struct {
 	// CGOEnabled 为 Go 构建时的 CGO 开关设置（"0" 或 "1"），仅在 IsGoBinary 为 true 时有效。
 	CGOEnabled string
 }
+
+func (vi *Result) SetDefault() {
+	if vi.Path == "" {
+		vi.Path = "unknown"
+	}
+	if vi.Format == "" {
+		vi.Format = "unknown"
+	}
+	if vi.GOOS == "" {
+		vi.GOOS = "unknown"
+	}
+	if vi.GOARCH == "" {
+		vi.GOARCH = "unknown"
+	}
+
+	if vi.IsGoBinary {
+		if vi.GoVersion == "" {
+			vi.GoVersion = "unknown"
+		}
+		if vi.CGOEnabled == "" {
+			vi.CGOEnabled = "unknown"
+		}
+		if vi.GOARCH == "" {
+			vi.GOARCH = "unknown"
+		}
+		if vi.GOOS == "" {
+			vi.GOOS = "unknown"
+		}
+	}
+}

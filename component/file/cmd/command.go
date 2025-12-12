@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -21,22 +20,16 @@ func NewFileCommand() *cobra.Command {
 			log := logger.NewLogger()
 			path := args[0]
 
-			if _, err := os.Stat(path); err != nil {
-				log.Err(err).Msg(err.Error())
-				log.Error().Msg(err.Error())
-				return err
-			}
-
-			analyzer := service.NewAnalyzerService(log)
+			analyzer := service.NewAnalyzerService()
 			res, err := analyzer.Analyze(path)
 			if err != nil {
 				log.Err(err).Msg(err.Error())
-				log.Error().Msg(err.Error())
 				return err
 			}
 
 			out := output.NewProcessor("", log)
 			defer out.Close()
+			log.Info().Msg("检测结果:")
 
 			fmt.Fprintf(out, "文件: %s\n", res.Path)
 			fmt.Fprintf(out, "二进制格式: %s\n", res.Format)

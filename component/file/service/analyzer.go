@@ -17,10 +17,22 @@ type AnalyzerService struct {
 	log *logger.Logger
 }
 
-func NewAnalyzerService(log *logger.Logger) *AnalyzerService {
+func NewAnalyzerService() *AnalyzerService {
+	log := logger.NewLogger(logger.WithModule("FileCheck", ""))
 	return &AnalyzerService{log: log}
 }
 
+// Analyze 以“逐层识别 + 构建信息补充”的方式分析目标文件：
+//  1. 规范化路径并记录；通过 os.Stat 检查是否具备可执行权限位（HasExecPerms）。
+//  2. 优先尝试 Mach-O fat：遍历每个架构，判断是否为可执行/可装载（IsExecutable），
+//     是否存在动态库依赖（HasDynamicLibs），汇总架构为逗号分隔的 GOARCH，并设置 GOOS=darwin。
+//  3. 若不是 fat，则尝试普通 Mach-O（thin），按同样规则填充字段。
+//  4. 若不是 Mach-O，则尝试 ELF：依据文件头类型判断可执行/装载，读取 DT_NEEDED 作为依赖，
+//     并根据 OSABI/Machine 推断 GOOS/GOARCH。
+//  5. 若不是 ELF，则尝试 PE：读取导入库判断是否有动态依赖，设置 GOOS=windows 与架构。
+//  6. 都不匹配时标记为 unknown。
+//  7. 最后尝试读取 Go 构建信息（debug/buildinfo），若存在则覆盖/补充 GOOS、GOARCH、GoVersion、CGOEnabled，
+//     并将 IsGoBinary 置为 true，以便更准确展示目标平台与构建参数。
 func (s *AnalyzerService) Analyze(path string) (model.Result, error) {
 	var res model.Result
 	abs := path
@@ -38,32 +50,33 @@ func (s *AnalyzerService) Analyze(path string) (model.Result, error) {
 	}
 	res.HasExecPerms = st.Mode()&0111 != 0
 
-	if f, err := macho.OpenFat(path); err == nil {
+	if fat, err := macho.OpenFat(path); err == nil {
+		defer fat.Close()
+		res.Format = "mach-o.fat"
+		res.GOOS = "darwin"
 		exec := false
 		dyn := false
-		osName := "darwin"
 		archs := ""
-		for i, a := range f.Arches {
-			if a.File != nil {
-				if a.File.Type == macho.TypeExec || a.File.Type == macho.TypeDylib {
-					exec = true
-				}
-				libs, _ := a.File.ImportedLibraries()
-				if len(libs) > 0 {
-					dyn = true
-				}
-				aStr := mapMachOCpu(a.Cpu)
-				if i == 0 {
-					archs = aStr
-				} else {
-					archs += "," + aStr
-				}
+		for i, a := range fat.Arches {
+			if a.File == nil {
+				continue
+			}
+			if a.File.Type == macho.TypeExec || a.File.Type == macho.TypeDylib {
+				exec = true
+			}
+			libs, _ := a.File.ImportedLibraries()
+			if len(libs) > 0 {
+				dyn = true
+			}
+			aStr := mapMachOCpu(a.Cpu)
+			if i == 0 {
+				archs = aStr
+			} else {
+				archs += "," + aStr
 			}
 		}
-		res.Format = "mach-o.fat"
 		res.IsExecutable = exec
 		res.HasDynamicLibs = dyn
-		res.GOOS = osName
 		res.GOARCH = archs
 		fillGoBuildInfo(path, &res)
 		return res, nil
@@ -97,7 +110,8 @@ func (s *AnalyzerService) Analyze(path string) (model.Result, error) {
 		defer f.Close()
 		res.Format = "pe"
 		res.IsExecutable = true
-		res.HasDynamicLibs = false
+		libs, _ := f.ImportedLibraries()
+		res.HasDynamicLibs = len(libs) > 0
 		res.GOOS = "windows"
 		res.GOARCH = mapPEMachine(f.Machine)
 		fillGoBuildInfo(path, &res)
