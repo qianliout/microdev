@@ -11,7 +11,6 @@ import (
 
 	"microdev/component/translate/model"
 	"microdev/pkg/config"
-	"microdev/pkg/errors"
 	"microdev/pkg/logger"
 	"microdev/pkg/utils"
 )
@@ -45,11 +44,11 @@ func NewTranslatorService(cfg *config.Config, log *logger.Logger) (*TranslatorSe
 			openai.WithModel(cfg.ModelName),
 		)
 	} else {
-		return nil, errors.NewConfigError("没有可用的API密钥", nil)
+		return nil, fmt.Errorf("not get llm api key")
 	}
 
 	if err != nil {
-		return nil, errors.NewLLMError("创建翻译服务失败", err)
+		return nil, fmt.Errorf("create translator service failed: %v", err)
 	}
 
 	log.Info().Str("model", cfg.ModelName).Msg("翻译服务初始化成功")
@@ -204,7 +203,7 @@ func (s *TranslatorService) generateStreamingResponse(messages []llms.MessageCon
 	// 调用LLM
 	_, err := s.llm.GenerateContent(ctx, messages, options...)
 	if err != nil {
-		return errors.NewLLMError("\n ❎ 流式翻译失败", err)
+		return fmt.Errorf("streaming translation failed: %v", err)
 	}
 
 	s.logger.Info().Msg("✅ 流式翻译完成")
@@ -220,14 +219,14 @@ func (s *TranslatorService) generateResponse(messages []llms.MessageContent, opt
 	// 调用LLM
 	response, err := s.llm.GenerateContent(ctx, messages, options...)
 	if err != nil {
-		return errors.NewLLMError("\n ❎ 翻译失败", err)
+		return fmt.Errorf("translation failed: %v", err)
 	}
 
 	// 写入响应
 	for _, choice := range response.Choices {
 		_, err := writer.Write([]byte(choice.Content))
 		if err != nil {
-			return errors.NewOutputError("写入翻译结果失败", err)
+			return fmt.Errorf("write translation result failed: %v", err)
 		}
 	}
 

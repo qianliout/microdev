@@ -11,7 +11,6 @@ import (
 	"microdev/component/translate/model"
 	"microdev/component/translate/service"
 	"microdev/pkg/config"
-	"microdev/pkg/errors"
 	"microdev/pkg/input"
 	"microdev/pkg/logger"
 )
@@ -80,8 +79,8 @@ func runTranslateCommand(cmd *cobra.Command, args []string, flagDir, flagFile bo
 	// 加载配置
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		log.Err(err).Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return err
 	}
 
@@ -93,8 +92,8 @@ func runTranslateCommand(cmd *cobra.Command, args []string, flagDir, flagFile bo
 	// 初始化翻译服务
 	translator, err := service.NewTranslatorService(cfg, log)
 	if err != nil {
-		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		log.Err(err).Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return err
 	}
 
@@ -108,7 +107,7 @@ func runTranslateCommand(cmd *cobra.Command, args []string, flagDir, flagFile bo
 
 	// 非交互模式，需要输入参数
 	if len(args) == 0 {
-		return fmt.Errorf("非交互模式需要提供输入参数，使用 -i 或 --interactive 进入交互模式")
+		return fmt.Errorf("require input in non-interactive mode; use -i/--interactive")
 	}
 
 	target := args[0]
@@ -117,8 +116,8 @@ func runTranslateCommand(cmd *cobra.Command, args []string, flagDir, flagFile bo
 	inputProcessor := input.NewProcessor(log)
 	content, err := inputProcessor.Process(target)
 	if err != nil {
-		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		log.Err(err).Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return err
 	}
 
@@ -158,8 +157,7 @@ func processInput(target, content string, processor *service.ProcessorService, l
 
 	// 直接文本
 	if err := processor.ProcessDirectText(content); err != nil {
-		log.Error().Msg(errors.GetUserFriendlyMessage(err))
-		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		log.Error().Msg(err.Error())
 		return err
 	}
 
@@ -169,16 +167,16 @@ func processInput(target, content string, processor *service.ProcessorService, l
 // runInteractiveTranslateMode 运行交互式翻译模式
 func runInteractiveTranslateMode(processor *service.ProcessorService, log *logger.Logger) error {
 	// 显示欢迎信息
-	log.UserInfo("🌐 欢迎使用中英互译交互模式！")
-	log.UserInfo("💡 特性：自动语言检测、智能翻译、实时输出")
-	log.UserInfo("📝 输入您要翻译的文本，我将为您进行中英互译。输入 'exit'、'quit' 或 '退出' 结束会话。")
-	log.UserInfo(strings.Repeat("-", 60))
+	log.Info().Msg("🌐 欢迎使用中英互译交互模式！")
+	log.Info().Msg("💡 特性：自动语言检测、智能翻译、实时输出")
+	log.Info().Msg("📝 输入您要翻译的文本，我将为您进行中英互译。输入 'exit'、'quit' 或 '退出' 结束会话。")
+	log.Info().Msg(strings.Repeat("-", 60))
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
 		// 显示输入提示
-		log.UserPrompt("\n🌍 请输入要翻译的文本: ")
+		log.Info().Msg("\n🌍 请输入要翻译的文本: ")
 
 		// 读取用户输入
 		if !scanner.Scan() {
@@ -189,31 +187,31 @@ func runInteractiveTranslateMode(processor *service.ProcessorService, log *logge
 
 		// 检查退出命令
 		if isExitCommand(userInput) {
-			log.UserInfo("\n👋 感谢使用！翻译会话已结束。")
+			log.Info().Msg("\n👋 感谢使用！翻译会话已结束。")
 			break
 		}
 
 		// 跳过空输入
 		if userInput == "" {
-			log.UserWarning("⚠️  输入不能为空，请重新输入。")
+			log.Warn().Msg("⚠️  输入不能为空，请重新输入。")
 			continue
 		}
 
 		// 显示处理状态
-		log.UserInfo("\n🔄 正在翻译...")
+		log.Info().Msg("\n🔄 正在翻译...")
 
 		// 执行翻译
 		if err := processor.ProcessDirectText(userInput); err != nil {
 			log.Error().Err(err).Msg("翻译失败")
-			log.UserError(fmt.Sprintf("❌ 翻译失败: %s", errors.GetUserFriendlyMessage(err)))
+			log.Error().Msg(fmt.Sprintf("❌ 翻译失败: %s", err.Error()))
 			continue
 		}
 
-		log.UserInfo(strings.Repeat("-", 60))
+		log.Info().Msg(strings.Repeat("-", 60))
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("读取输入时发生错误: %v", err)
+		return fmt.Errorf("failed to read input: %v", err)
 	}
 
 	return nil

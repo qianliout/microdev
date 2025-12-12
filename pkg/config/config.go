@@ -1,10 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
-
-	"microdev/pkg/errors"
 )
 
 // Config 包含应用程序配置
@@ -42,7 +41,7 @@ func LoadConfig() (*Config, error) {
 
 	// 验证至少有一个API密钥
 	if cfg.DashScopeAPIKey == "" && cfg.AliBailianAPIKey == "" {
-		return nil, errors.NewConfigError("至少需要设置 DASHSCOPE_API_KEY 或 ALI_BAILIAN_API_KEY 环境变量", nil)
+		return nil, fmt.Errorf("require env DASHSCOPE_API_KEY or ALI_BAILIAN_API_KEY")
 	}
 
 	return cfg, nil

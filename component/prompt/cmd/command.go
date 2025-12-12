@@ -11,7 +11,6 @@ import (
 	"microdev/component/prompt/model"
 	"microdev/component/prompt/service"
 	"microdev/pkg/config"
-	"microdev/pkg/errors"
 	"microdev/pkg/input"
 	"microdev/pkg/logger"
 	"microdev/pkg/output"
@@ -61,16 +60,16 @@ func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error
 	// 加载配置
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		log.Err(err).Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return err
 	}
 
 	// 初始化优化服务
 	optimizer, err := service.NewOptimizerService(cfg, log)
 	if err != nil {
-		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		log.Err(err).Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return err
 	}
 
@@ -81,7 +80,7 @@ func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error
 
 	// 非交互模式，需要输入参数
 	if len(args) == 0 {
-		return fmt.Errorf("非交互模式需要提供输入参数，使用 -i 或 --interactive 进入交互模式")
+		return fmt.Errorf("require input in non-interactive mode; use -i/--interactive")
 	}
 
 	inputText := args[0]
@@ -90,8 +89,8 @@ func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error
 	inputProcessor := input.NewProcessor(log)
 	content, err := inputProcessor.Process(inputText)
 	if err != nil {
-		log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		log.Err(err).Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return err
 	}
 
@@ -107,8 +106,7 @@ func runPromptCommand(cmd *cobra.Command, args []string, interactive bool) error
 
 	// 执行优化
 	if err := optimizer.Optimize(request, outputProcessor); err != nil {
-		log.Error().Msg(errors.GetUserFriendlyMessage(err))
-		log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+		log.Error().Msg(err.Error())
 		return err
 	}
 
@@ -122,16 +120,16 @@ func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger)
 	defer optimizer.EndSession()
 
 	// 显示欢迎信息
-	log.UserInfo("🤖 欢迎使用提示词优化交互模式！")
-	log.UserInfo("💡 特性：保持对话历史、智能记忆压缩、上下文感知优化")
-	log.UserInfo("📝 输入您的提示词，我将为您优化。输入 'exit'、'quit' 或 '退出' 结束会话。")
-	log.UserInfo(strings.Repeat("-", 60))
+	log.Info().Msg("🤖 欢迎使用提示词优化交互模式！")
+	log.Info().Msg("💡 特性：保持对话历史、智能记忆压缩、上下文感知优化")
+	log.Info().Msg("📝 输入您的提示词，我将为您优化。输入 'exit'、'quit' 或 '退出' 结束会话。")
+	log.Info().Msg(strings.Repeat("-", 60))
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
 		// 显示输入提示
-		log.UserPrompt("\n💬 请输入提示词: ")
+		log.Info().Msg("\n💬 请输入提示词: ")
 
 		// 读取用户输入
 		if !scanner.Scan() {
@@ -142,18 +140,18 @@ func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger)
 
 		// 检查退出命令
 		if isExitCommand(userInput) {
-			log.UserInfo("\n👋 感谢使用！会话已结束。")
+			log.Info().Msg("\n👋 感谢使用！会话已结束。")
 			break
 		}
 
 		// 跳过空输入
 		if userInput == "" {
-			log.UserWarning("⚠️  输入不能为空，请重新输入。")
+			log.Warn().Msg("⚠️  输入不能为空，请重新输入。")
 			continue
 		}
 
 		// 显示处理状态
-		log.UserInfo("\n🔄 正在优化提示词...")
+		log.Info().Msg("\n🔄 正在优化提示词...")
 
 		// 初始化输出处理器
 		outputProcessor := output.NewProcessor("", log)
@@ -167,7 +165,7 @@ func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger)
 		// 执行会话模式优化
 		if err := optimizer.OptimizeWithSession(request, outputProcessor); err != nil {
 			log.Error().Err(err).Msg("优化失败")
-			log.UserError(fmt.Sprintf("❌ 优化失败: %s", errors.GetUserFriendlyMessage(err)))
+			log.Error().Msg(fmt.Sprintf("❌ 优化失败: %s", err.Error()))
 			continue
 		}
 
@@ -180,14 +178,14 @@ func runInteractiveMode(optimizer *service.OptimizerService, log *logger.Logger)
 			if stats["has_summary"].(bool) {
 				statsMsg += " (已压缩记忆)"
 			}
-			log.UserInfo(statsMsg)
+			log.Info().Msg(statsMsg)
 		}
 
-		log.UserInfo(strings.Repeat("-", 60))
+		log.Info().Msg(strings.Repeat("-", 60))
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("读取输入时发生错误: %v", err)
+		return fmt.Errorf("failed to read input: %v", err)
 	}
 
 	return nil

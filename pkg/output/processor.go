@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"microdev/pkg/errors"
 	"microdev/pkg/logger"
 )
 
@@ -61,19 +60,19 @@ func (p *Processor) WriteString(s string) (int, error) {
 // openFile 打开输出文件
 func (p *Processor) openFile() error {
 	if p.outputFile == "" {
-		return errors.NewOutputError("输出文件路径为空", nil)
+		return fmt.Errorf("output file path is empty")
 	}
 
 	// 确保目录存在
 	dir := filepath.Dir(p.outputFile)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return errors.NewFileError(fmt.Sprintf("无法创建目录 %s", dir), err)
+		return fmt.Errorf("create directory %s failed: %v", dir, err)
 	}
 
 	// 以追加模式打开文件
 	file, err := os.OpenFile(p.outputFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		return errors.NewFileError(fmt.Sprintf("无法打开输出文件 %s", p.outputFile), err)
+		return fmt.Errorf("open output file %s failed: %v", p.outputFile, err)
 	}
 
 	p.file = file
@@ -88,7 +87,7 @@ func (p *Processor) Close() error {
 		err := p.file.Close()
 		p.file = nil
 		if err != nil {
-			return errors.NewFileError("关闭输出文件失败", err)
+			return fmt.Errorf("close output file failed: %v", err)
 		}
 		p.logger.Info().Msg("输出文件已关闭")
 	}

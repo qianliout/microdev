@@ -20,12 +20,21 @@ func NewLogger(opts ...Option) *Logger {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	console := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "2006-01-02 15:04:05"}
 
-	l := &Logger{out: console, Module: "app", Submodule: "main"}
+	l := &Logger{out: console}
+
 	for _, opt := range opts {
 		opt(l)
 	}
 
-	l.logger = zerolog.New(l.out).With().Timestamp().Str("Module", l.Module).Str("Submodule", l.Submodule).Logger()
+	c := zerolog.New(l.out).With().Timestamp()
+	if l.Module != "" {
+		c.Str("Module", l.Module)
+	}
+	if l.Submodule != "" {
+		c.Str("Submodule", l.Submodule)
+	}
+	l.logger = c.Logger()
+
 	return l
 }
 

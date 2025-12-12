@@ -12,7 +12,6 @@ import (
 	"microdev/component/prompt/model"
 	"microdev/component/prompt/session"
 	"microdev/pkg/config"
-	"microdev/pkg/errors"
 	"microdev/pkg/logger"
 )
 
@@ -45,11 +44,11 @@ func NewOptimizerService(cfg *config.Config, log *logger.Logger) (*OptimizerServ
 			openai.WithModel(cfg.ModelName),
 		)
 	} else {
-		return nil, errors.NewConfigError("没有可用的API密钥", nil)
+		return nil, fmt.Errorf("not get llm api key")
 	}
 
 	if err != nil {
-		return nil, errors.NewLLMError("创建优化服务失败", err)
+		return nil, fmt.Errorf("create optimizer service failed: %v", err)
 	}
 
 	log.Info().Str("model", cfg.ModelName).Msg("提示词优化服务初始化成功")
@@ -188,7 +187,7 @@ func (s *OptimizerService) generateStreamingResponse(messages []llms.MessageCont
 	// 调用LLM
 	_, err := s.llm.GenerateContent(ctx, messages, options...)
 	if err != nil {
-		return errors.NewLLMError("\n ❎ 流式优化失败", err)
+		return fmt.Errorf("streaming optimization failed: %v", err)
 	}
 
 	s.logger.Info().Msg("✅ 流式优化完成")
@@ -206,7 +205,7 @@ func (s *OptimizerService) generateResponse(messages []llms.MessageContent, opti
 	response, err := s.llm.GenerateContent(ctx, messages, options...)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("❌ LLM生成响应失败")
-		return errors.NewLLMError("\n ❎ 优化失败", err)
+		return fmt.Errorf("optimize failed: %v", err)
 	}
 
 	duration := time.Since(startTime)
@@ -226,7 +225,7 @@ func (s *OptimizerService) generateResponse(messages []llms.MessageContent, opti
 		_, err := writer.Write([]byte(choice.Content))
 		if err != nil {
 			s.logger.Error().Err(err).Msg("❌ 写入响应失败")
-			return errors.NewOutputError("写入优化结果失败", err)
+			return fmt.Errorf("write optimized result failed: %v", err)
 		}
 	}
 

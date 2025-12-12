@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"microdev/pkg/config"
-	"microdev/pkg/errors"
 	"microdev/pkg/logger"
 
 	"github.com/tmc/langchaingo/llms"
@@ -42,11 +41,11 @@ func NewClient(cfg *config.Config, log *logger.Logger) (*Client, error) {
 			openai.WithModel(cfg.ModelName),
 		)
 	} else {
-		return nil, errors.NewConfigError("没有可用的API密钥", nil)
+		return nil, fmt.Errorf("not get llm api key")
 	}
 
 	if err != nil {
-		return nil, errors.NewLLMError("创建LLM客户端失败", err)
+		return nil, fmt.Errorf("create llm client failed: %v", err)
 	}
 	log.Info().Str("model", cfg.ModelName).Msg("LLM客户端初始化成功")
 
@@ -113,7 +112,7 @@ func (c *Client) generateStreamingResponse(messages []llms.MessageContent, optio
 	// 调用LLM
 	_, err := c.llm.GenerateContent(ctx, messages, options...)
 	if err != nil {
-		return errors.NewLLMError("\n ❎ 流式生成失败", err)
+		return fmt.Errorf("streaming generation failed: %v", err)
 	}
 
 	c.logger.Info().Msg("✅ 流式生成完成")
@@ -129,12 +128,12 @@ func (c *Client) generateResponse(messages []llms.MessageContent, options []llms
 	// 调用LLM
 	resp, err := c.llm.GenerateContent(ctx, messages, options...)
 	if err != nil {
-		return errors.NewLLMError("生成失败", err)
+		return fmt.Errorf("generate failed: %v", err)
 	}
 
 	// 提取响应内容
 	if len(resp.Choices) == 0 {
-		return errors.NewLLMError("没有收到响应内容", nil)
+		return fmt.Errorf("empty response content")
 	}
 
 	content := resp.Choices[0].Content
@@ -142,7 +141,7 @@ func (c *Client) generateResponse(messages []llms.MessageContent, options []llms
 	// 写入响应
 	_, err = writer.Write([]byte(strings.TrimSpace(content)))
 	if err != nil {
-		return errors.NewOutputError("写入响应失败", err)
+		return fmt.Errorf("write response failed: %v", err)
 	}
 
 	c.logger.Info().Msg("✅ 非流式生成完成")

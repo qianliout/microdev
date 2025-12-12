@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"microdev/pkg/errors"
 	"microdev/pkg/logger"
 )
 
@@ -28,7 +27,7 @@ func NewProcessor(log *logger.Logger) *Processor {
 // 否则直接使用输入字符串作为内容
 func (p *Processor) Process(input string) (string, error) {
 	if input == "" {
-		return "", errors.NewInputError("输入内容不能为空", nil)
+		return "", fmt.Errorf("input cannot be empty")
 	}
 
 	p.logger.Debug().Str("input", input).Msg("处理输入")
@@ -70,19 +69,19 @@ func (p *Processor) readFileContent(filePath string) (string, error) {
 	// 打开文件
 	file, err := os.Open(filePath)
 	if err != nil {
-		return "", errors.NewFileError(fmt.Sprintf("无法打开文件 %s", filePath), err)
+		return "", fmt.Errorf("open file %s failed: %v", filePath, err)
 	}
 	defer file.Close()
 
 	// 读取文件内容
 	content, err := io.ReadAll(file)
 	if err != nil {
-		return "", errors.NewFileError(fmt.Sprintf("无法读取文件 %s", filePath), err)
+		return "", fmt.Errorf("read file %s failed: %v", filePath, err)
 	}
 
 	// 检查文件是否为空
 	if len(content) == 0 {
-		return "", errors.NewInputError(fmt.Sprintf("文件 %s 为空", filePath), nil)
+		return "", fmt.Errorf("file %s is empty", filePath)
 	}
 
 	p.logger.Info().Int("len", len(content)).Msg("成功读取文件")

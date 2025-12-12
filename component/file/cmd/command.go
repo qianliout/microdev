@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"microdev/component/file/service"
-	"microdev/pkg/errors"
 	"microdev/pkg/logger"
 	"microdev/pkg/output"
 )
@@ -23,16 +22,16 @@ func NewFileCommand() *cobra.Command {
 			path := args[0]
 
 			if _, err := os.Stat(path); err != nil {
-				log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-				log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+				log.Err(err).Msg(err.Error())
+				log.Error().Msg(err.Error())
 				return err
 			}
 
 			analyzer := service.NewAnalyzerService(log)
 			res, err := analyzer.Analyze(path)
 			if err != nil {
-				log.Err(err).Msg(errors.GetUserFriendlyMessage(err))
-				log.UserError(fmt.Sprintf("错误: %s", errors.GetUserFriendlyMessage(err)))
+				log.Err(err).Msg(err.Error())
+				log.Error().Msg(err.Error())
 				return err
 			}
 
