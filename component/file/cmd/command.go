@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"microdev/component/file/service"
 	"microdev/pkg/logger"
-	"microdev/pkg/output"
 )
 
 func NewFileCommand() *cobra.Command {
@@ -23,34 +20,10 @@ func NewFileCommand() *cobra.Command {
 			analyzer := service.NewAnalyzerService()
 			res, err := analyzer.Analyze(path)
 			if err != nil {
-				log.Err(err).Msg(err.Error())
+				log.Err(err).Str("path", path).Msg("parse file failed")
 				return err
 			}
-
-			out := output.NewProcessor("", log)
-			defer out.Close()
-			log.Info().Msg("检测结果:")
-
-			fmt.Fprintf(out, "文件: %s\n", res.Path)
-			fmt.Fprintf(out, "二进制格式: %s\n", res.Format)
-			fmt.Fprintf(out, "可执行格式: %t\n", res.IsExecutable)
-			fmt.Fprintf(out, "执行权限: %t\n", res.HasExecPerms)
-			fmt.Fprintf(out, "动态链接库: %t\n", res.HasDynamicLibs)
-			if res.GOOS != "" || res.GOARCH != "" {
-				fmt.Fprintf(out, "平台: %s/%s\n", res.GOOS, res.GOARCH)
-			} else {
-				fmt.Fprintf(out, "平台: 未知\n")
-			}
-			if res.IsGoBinary {
-				fmt.Fprintf(out, "Go构建: true\n")
-				fmt.Fprintf(out, "Go版本: %s\n", res.GoVersion)
-				if res.CGOEnabled != "" {
-					fmt.Fprintf(out, "CGO_ENABLED: %s\n", res.CGOEnabled)
-				}
-			} else {
-				fmt.Fprintf(out, "Go构建: false\n")
-			}
-
+			analyzer.Output(&res)
 			return nil
 		},
 	}

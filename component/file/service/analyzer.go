@@ -22,6 +22,35 @@ func NewAnalyzerService() *AnalyzerService {
 	return &AnalyzerService{log: log}
 }
 
+// 把结果规整，美观的输出到控制台
+// 每个结果一行，要美观，容易读
+func (s *AnalyzerService) Output(res *model.Result) {
+	s.log.Info().Str("文件路径", res.Path).Msg("")
+
+	// 使用 fmt.Printf 实现更美观的多行输出
+	fmt.Println("--- 文件分析结果 ---")
+	fmt.Printf("文件路径: %s\n", res.Path)
+	fmt.Printf("文件格式: %s\n", res.Format)
+	fmt.Printf("可执行文件: %t\n", res.IsExecutable)
+	fmt.Printf("可执行权限: %t\n", res.HasExecPerms)
+	fmt.Printf("动态链接: %t\n", res.HasDynamicLibs)
+	fmt.Printf("目标平台操作系统: %s\n", res.GOOS)
+	fmt.Printf("目标平台操作系统: %s\n", res.GOOS)
+
+	if res.GOOS != "" || res.GOARCH != "" {
+		fmt.Printf("目标平台: %s/%s\n", res.GOOS, res.GOARCH)
+	}
+
+	if res.IsGoBinary {
+		fmt.Println("--- Go 构建信息 ---")
+		fmt.Printf("  Go 版本: %s\n", res.GoVersion)
+		if res.CGOEnabled != "" {
+			fmt.Printf("  CGO_ENABLED: %s\n", res.CGOEnabled)
+		}
+	}
+	fmt.Println("---------------------")
+}
+
 // Analyze 以“逐层识别 + 构建信息补充”的方式分析目标文件：
 //  1. 规范化路径并记录；通过 os.Stat 检查是否具备可执行权限位（HasExecPerms）。
 //  2. 优先尝试 Mach-O fat：遍历每个架构，判断是否为可执行/可装载（IsExecutable），
@@ -118,10 +147,8 @@ func (s *AnalyzerService) Analyze(path string) (model.Result, error) {
 		return res, nil
 	}
 
-	res.Format = "unknown"
-	res.IsExecutable = false
-	res.HasDynamicLibs = false
 	fillGoBuildInfo(path, &res)
+	res.SetDefault()
 	return res, nil
 }
 
