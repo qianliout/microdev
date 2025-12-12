@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	fileCmd "microdev/component/file/cmd"
 	promptCmd "microdev/component/prompt/cmd"
 	translateCmd "microdev/component/translate/cmd"
 )
@@ -22,6 +23,7 @@ func main() {
 	// 添加子命令
 	rootCmd.AddCommand(promptCmd.NewPromptCommand())
 	rootCmd.AddCommand(translateCmd.NewTranslateCommand())
+	rootCmd.AddCommand(fileCmd.NewFileCommand())
 
 	// 执行命令
 	if err := rootCmd.Execute(); err != nil {

@@ -3,7 +3,7 @@
 .PHONY: build test clean install help
 
 # 默认目标
-all: build
+all: build install help
 
 # 构建项目
 build:
