@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/rs/zerolog"
 )
 
@@ -49,10 +50,22 @@ func (l *Logger) Error() *zerolog.Event        { return l.logger.Error() }
 func (l *Logger) Err(err error) *zerolog.Event { return l.logger.Err(err) }
 func (l *Logger) Writer() io.Writer            { return l.out }
 
+// output to terminal,and trip no use info
+func (l *Logger) UserInfo(msg string) {
+	c := color.New(color.FgGreen, color.Bold)
+	c.Fprintf(os.Stdout, "[INFO] %s\n", msg)
+}
+
 func WithModule(m, su string) Option {
 	op := func(l *Logger) {
 		l.Module = m
 		l.Submodule = su
 	}
 	return op
+}
+
+func WithStdout() Option {
+	return func(l *Logger) {
+		l.out = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "2006-01-02 15:04:05"}
+	}
 }

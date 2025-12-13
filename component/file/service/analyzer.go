@@ -25,30 +25,16 @@ func NewAnalyzerService() *AnalyzerService {
 // 把结果规整，美观的输出到控制台
 // 每个结果一行，要美观，容易读
 func (s *AnalyzerService) Output(res *model.Result) {
-	s.log.Info().Str("文件路径", res.Path).Msg("")
-
-	// 使用 fmt.Printf 实现更美观的多行输出
-	fmt.Println("--- 文件分析结果 ---")
-	fmt.Printf("文件路径: %s\n", res.Path)
-	fmt.Printf("文件格式: %s\n", res.Format)
-	fmt.Printf("可执行文件: %t\n", res.IsExecutable)
-	fmt.Printf("可执行权限: %t\n", res.HasExecPerms)
-	fmt.Printf("动态链接: %t\n", res.HasDynamicLibs)
-	fmt.Printf("目标平台操作系统: %s\n", res.GOOS)
-	fmt.Printf("目标平台操作系统: %s\n", res.GOOS)
-
-	if res.GOOS != "" || res.GOARCH != "" {
-		fmt.Printf("目标平台: %s/%s\n", res.GOOS, res.GOARCH)
-	}
-
-	if res.IsGoBinary {
-		fmt.Println("--- Go 构建信息 ---")
-		fmt.Printf("  Go 版本: %s\n", res.GoVersion)
-		if res.CGOEnabled != "" {
-			fmt.Printf("  CGO_ENABLED: %s\n", res.CGOEnabled)
-		}
-	}
-	fmt.Println("---------------------")
+	s.log.UserInfo(fmt.Sprintf("File Path: %s", res.Path))
+	s.log.UserInfo(fmt.Sprintf("File Format: %s", res.Format))
+	s.log.UserInfo(fmt.Sprintf("Executable: %t", res.IsExecutable))
+	s.log.UserInfo(fmt.Sprintf("Has Exec Perms: %t", res.HasExecPerms))
+	s.log.UserInfo(fmt.Sprintf("Has Dynamic Libs: %t", res.HasDynamicLibs))
+	s.log.UserInfo(fmt.Sprintf("GOOS: %s", res.GOOS))
+	s.log.UserInfo(fmt.Sprintf("GOARCH: %s", res.GOARCH))
+	s.log.UserInfo(fmt.Sprintf("Is Go Binary: %t", res.IsGoBinary))
+	s.log.UserInfo(fmt.Sprintf("Go Version: %s", res.GoVersion))
+	s.log.UserInfo(fmt.Sprintf("CGO Enabled: %s", res.CGOEnabled))
 }
 
 // Analyze 以“逐层识别 + 构建信息补充”的方式分析目标文件：
