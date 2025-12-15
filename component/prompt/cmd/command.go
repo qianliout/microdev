@@ -11,9 +11,9 @@ import (
 	"microdev/component/prompt/model"
 	"microdev/component/prompt/service"
 	"microdev/pkg/config"
-	"microdev/pkg/input"
+	"microdev/component/translate/input"
 	"microdev/pkg/logger"
-	"microdev/pkg/output"
+	"microdev/component/translate/output"
 )
 
 // NewPromptCommand 创建 prompt 子命令

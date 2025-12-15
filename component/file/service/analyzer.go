@@ -24,7 +24,7 @@ func NewAnalyzerService() *AnalyzerService {
 
 // 把结果规整，美观的输出到控制台
 // 每个结果一行，要美观，容易读
-func (s *AnalyzerService) Output(res *model.Result) {
+func (s *AnalyzerService) Output(res *model.Result) error {
 	s.log.UserInfo(fmt.Sprintf("File Path: %s", res.Path))
 	s.log.UserInfo(fmt.Sprintf("File Format: %s", res.Format))
 	s.log.UserInfo(fmt.Sprintf("Executable: %t", res.IsExecutable))
@@ -35,6 +35,7 @@ func (s *AnalyzerService) Output(res *model.Result) {
 	s.log.UserInfo(fmt.Sprintf("Is Go Binary: %t", res.IsGoBinary))
 	s.log.UserInfo(fmt.Sprintf("Go Version: %s", res.GoVersion))
 	s.log.UserInfo(fmt.Sprintf("CGO Enabled: %s", res.CGOEnabled))
+	return nil
 }
 
 // Analyze 以“逐层识别 + 构建信息补充”的方式分析目标文件：

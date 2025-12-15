@@ -23,7 +23,7 @@ func NewFileCommand() *cobra.Command {
 				log.Err(err).Str("path", path).Msg("parse file failed")
 				return err
 			}
-			analyzer.Output(&res)
+			_ = analyzer.Output(&res)
 			return nil
 		},
 	}

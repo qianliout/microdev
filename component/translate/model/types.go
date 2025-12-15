@@ -1,59 +1,56 @@
 package model
 
-// TranslationRequest 翻译请求
-type TranslationRequest struct {
-	Content    string `json:"content"`
-	InputPath  string `json:"input_path,omitempty"`
-	OutputPath string `json:"output_path,omitempty"`
-	Language   string `json:"language,omitempty"` // zh2en 或 en2zh
+import "io"
+
+// TranslateRequest 翻译请求
+type Translate struct {
+	Input  io.ReadCloser      `json:"input"`
+	Direct string             `json:"direction"` // zh2en 或 en2zh
+	Output io.ReadWriteCloser `json:"output"`
 }
 
-// TranslationResponse 翻译响应
-type TranslationResponse struct {
-	TranslatedContent string `json:"translated_content"`
-	OriginalContent   string `json:"original_content"`
-	Language          string `json:"language"`
+const (
+	DirectionZh2En = "zh2en"
+	DirectionEn2Zh = "en2zh"
+)
+
+// RWPipe 读写管道，支持流式边写边读
+// 使用 io.Pipe 实现，便于LLM流式输出与终端同步打印
+type RWPipe struct {
+	r *io.PipeReader
+	w *io.PipeWriter
 }
 
-// TranslationTask 翻译任务
-type TranslationTask struct {
-	InputPath  string
-	Content    string
-	OutputPath string
+// NewRWPipe 创建新的读写管道
+func NewRWPipe() *RWPipe {
+	pr, pw := io.Pipe()
+	return &RWPipe{r: pr, w: pw}
 }
 
-// TranslationConfig 翻译配置
-type TranslationConfig struct {
-	MaxTokens     int     `json:"max_tokens"`
-	Temperature   float64 `json:"temperature"`
-	StreamOutput  bool    `json:"stream_output"`
-	Concurrency   int     `json:"concurrency"`
-	ForceRewrite  bool    `json:"force_rewrite"`
+// Read 从管道读取数据
+func (p *RWPipe) Read(b []byte) (int, error) {
+	return p.r.Read(b)
 }
 
-// ProcessingOptions 处理选项
-type ProcessingOptions struct {
-	Directory    bool   `json:"directory"`     // 是否处理目录
-	File         bool   `json:"file"`          // 是否处理文件
-	FileType     string `json:"file_type"`     // 文件类型过滤
-	Force        bool   `json:"force"`         // 强制重新翻译
-	Concurrency  int    `json:"concurrency"`   // 并发数
-	OutputSuffix string `json:"output_suffix"` // 输出文件后缀
+// Write 向管道写入数据
+func (p *RWPipe) Write(b []byte) (int, error) {
+	return p.w.Write(b)
 }
 
-// Chunk Markdown内容块
-type Chunk struct {
-	Content string
-	Level   int    // 标题层级，0表示非标题块
-	Title   string // 标题文本
+// Close 关闭读写端（用于资源回收）
+func (p *RWPipe) Close() error {
+	// 先关闭写端，通知读端EOF
+	_ = p.w.Close()
+	// 再关闭读端
+	return p.r.Close()
 }
 
-// FileInfo 文件信息
-type FileInfo struct {
-	Path         string
-	Name         string
-	Extension    string
-	Size         int64
-	IsDirectory  bool
-	LastModified int64
+// CloseWrite 仅关闭写端，触发读端EOF
+func (p *RWPipe) CloseWrite() error {
+	return p.w.Close()
+}
+
+// CloseRead 仅关闭读端
+func (p *RWPipe) CloseRead() error {
+	return p.r.Close()
 }
