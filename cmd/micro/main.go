@@ -10,6 +10,7 @@ import (
 	fileCmd "microdev/component/file/api"
 	promptCmd "microdev/component/prompt/api"
 	translateCmd "microdev/component/translate/api"
+	youdaoCmd "microdev/component/youdao/api"
 )
 
 func main() {
@@ -19,12 +20,14 @@ func main() {
 		Long: `micro 是一个微开发工具集，提供以下功能：
 - prompt (p): 优化并生成更好的提示词
 - translate (t): 中英互译，支持文件、目录或直接文本
-- file (f): 检测二进制文件信息`,
+- file (f): 检测二进制文件信息
+- youdao (y): 把本地 Markdown 同步到有道云笔记`,
 		SilenceUsage: true,
 	}
 	rootCmd.AddCommand(promptCmd.NewPromptCommand())
 	rootCmd.AddCommand(translateCmd.NewTranslateCommand())
 	rootCmd.AddCommand(fileCmd.NewFileCommand())
+	rootCmd.AddCommand(youdaoCmd.NewYoudaoCommand())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
